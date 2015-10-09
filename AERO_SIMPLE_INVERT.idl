@@ -1,0 +1,477 @@
+% ;
+% ;
+% ; Simple 2D Fernald aerosol targeted inversion
+% ;
+% ;
+%         function blankticks,axis,index,value
+% ;
+%         goomba=value
+% ;
+%         string=' '
+% ;
+%         return,string
+% ;
+%         end
+% ;
+% function loc_logticks, axis, index, value
+% ;
+% ;        value=10.0^(value)
+%   if ((value gt 10.0) or (value lt 0.1)) then begin
+%      power=alog10(value)
+%      string='10!U'+string(power,format="(f4.1)")+'!N'
+%   endif else begin
+%      string=string(value,format="(f5.1)")
+%   endelse
+% ;
+%   return, string
+% end
+% ;
+% 	pro Klett_general_interval,range,sig_pass,d_sig,k,a,rm1,rm2,alpha_m,alpha,Cp_lid,air,d_alpha
+% ;
+% ;
+% ;
+% ;	Calculates 			   r
+% ;					   /
+% ;	sigma(r)=P^(1/k)/(1/alpha_m - 2a/k | P^(1/k)(r) dr'
+% ;					   /
+% ;					  rm
+% ;
+% ;
+% ;	Returns also the value of Cp_lid implied by the boundry condition
+% ;	chosen (C_lid * C_adb)
+% ;
+% ;       normalization error not included in d_alpha  !!!!
+% ;
+% 	res=range[2]-range[1]
+% 	int_sig=range*0.0
+%         d_alpha_d_sig=int_sig
+% ;
+% 	sig=sig_pass
+% ;
+%         n=max(where(sig gt 0.0))
+% ;
+% 	if not(air) then begin
+% 		int_sig[0]=0.5*sig[0]
+% 	        for i=1,n-1 do begin
+% 	             int_sig[i]=int_sig[i-1]+0.5*(sig[i-1]^(1.0/k)*res*2.0*a/k+sig[i]^(1.0/k)*res*2.0*a/k)
+%         	endfor
+% 	endif else begin
+% 		int_sig[n-1]=0.5*sig[n-1]
+% 	        for i=n-2,0,-1 do begin
+% 	             int_sig[i]=int_sig[i+1]+0.5*(sig[i+1]^(1.0/k)*res*2.0*a/k+sig[i]^(1.0/k)*res*2.0*a/k)
+%         	endfor
+% 	endelse
+% ;
+%         rm=(rm1+rm2)/2
+% 
+% 	im=max(where(range le rm))
+%         iim=where((range le rm2) and (range ge rm1))
+% ;
+% 	int_sig=int_sig-int_sig[im]
+% ;
+%         sig_im=mean(sig[iim]) ;       
+% 
+% 	alpha=sig^(1.0/k)/(sig_im^(1.0/k)/alpha_m-int_sig)
+%         d_alpha=alpha*0.0
+% ;
+% ;
+% 	if not(air) then begin
+%            for i=1,n-1 do begin
+%               d_alpha[i]=res*sqrt((alpha[i]*d_sig[i]/sig[i])^2+total((2*alpha[0:i]*d_sig[i]/int_sig[i])^2))
+%            endfor
+%         endif else begin
+%            for i=n-2,0,-1 do begin
+%               d_alpha[i]=res*sqrt((alpha[i]*d_sig[i]/sig[i])^2+total((2*alpha[n,i]*d_sig[i]/int_sig[i])^2))
+%            endfor
+%         endelse
+% ;
+%         Tau_Rm=total(alpha[0:im-1]*res)+alpha[im]*res/2.0
+% ;
+% 	Cp_lid=exp(2.0*a/k*Tau_Rm)*sig_im^(1.0/k)/alpha_m
+% ;
+% ;
+% ;
+% ;
+% 	return
+% 
+% 	end
+% ;
+% ;
+% ;
+% 	pro Klett_general,range,sig_pass,k,a,rm,alpha_m,alpha,Cp_lid,air
+% ;
+% ;
+% ;
+% ;	Calculates 			   r
+% ;					   /
+% ;	sigma(r)=P^(1/k)/(1/alpha_m - 2a/k | P^(1/k)(r) dr'
+% ;					   /
+% ;					  rm
+% ;
+% ;
+% ;	Returns also the value of Cp_lid implied by the boundry condition
+% ;	chosen (C_lid * C_adb)
+% ;
+% 	res=range[2]-range[1]
+% 	int_sig=range*0.0
+% ;
+% 	sig=sig_pass
+% 	ii=where(sig_pass lt 0.0,count)
+% 	if (count gt 0) then sig[ii]=0.0 
+% ;
+% ;	n=(size(range))[3]
+% ;
+%         n=max(where(sig gt 0.0))
+% ;
+% 	if not(air) then begin
+% 		int_sig[0]=0.5*sig[0]
+% 	        for i=1,n-1 do begin
+% 	             int_sig[i]=int_sig[i-1]+0.5*(sig[i-1]^(1.0/k)*res*2.0*a/k+sig[i]^(1.0/k)*res*2.0*a/k)
+%         	endfor
+% 	endif else begin
+% 		int_sig[n-1]=0.5*sig[n-1]
+% 	        for i=n-2,0,-1 do begin
+% 	             int_sig[i]=int_sig[i+1]+0.5*(sig[i+1]^(1.0/k)*res*2.0*a/k+sig[i]^(1.0/k)*res*2.0*a/k)
+%         	endfor
+% 	endelse
+% ;
+% 	im=max(where(range le rm))
+% ;
+% 	int_sig=int_sig-int_sig[im]
+% ;
+% 	alpha=sig^(1.0/k)/(sig(im)^(1.0/k)/alpha_m-int_sig)
+% ;
+%         Tau_Rm=total(alpha[0:im-1]*res)+alpha[im]*res/2.0
+% ;
+% 	Cp_lid=exp(2.0*a/k*Tau_Rm)*sig_pass[im]^(1.0/k)/alpha_m
+% ;
+% 	return
+% 	end
+% ;
+% ;
+%      pro get_ray_sigma_beta,wavelen,sigma,beta
+% ;
+% ;     wavelength in nm
+% ;
+% ;     beta and sigma in cm^3/(sr)/km/molecule
+% ;
+% ;     Using data of D.R. Bates
+% ;     find the rayleigh extinction and backscattering
+% ;     cross sections (valid from about 300 to 1000 nm)
+% ;
+% ;
+%       pi=asin(1.0)*2.0
+% ;
+%       sigma=get_Ray_sigma(wavelen)
+% ;
+%       Fk=1.225e-13*wavelen^4     $
+%           -3.911e-10*wavelen^3   $
+%           +4.6100e-7*wavelen^2   $
+%           -2.410e-4*wavelen      $
+%           +1.095                 
+% ;
+%       e=(Fk-1.0)*9.0/2.0
+% ;
+%       beta=3.0/(4.0*pi)*(180.0+28.0*e)/(360.0+82*e)*sigma
+% ;
+%       sigma=sigma*1.e+5
+%       beta=beta*1.e+5
+% ;
+%       end
+% 
+% 
+% 
+% 
+%      function get_Ray_sigma,wavelen
+% ;
+% ;
+% ;     returns the rayleigh extinction coefficient
+% ;     in cm^2. Wavelength is in nm
+% ;
+% ;     (must multiply by 1.e+5 if dealing with km)
+% ;
+% ;
+% ;
+%       work=wavelen/1000.0
+% ;
+%       if (wavelen lt 550) then begin
+%          x=0.389*work+0.09426/(work)-0.3228
+%       endif else begin
+%          x=0.04
+%       endelse
+% ;
+%       sigma=4.02e-28/(work^(4+x))
+% ;
+%       return,sigma
+%       end
+% ;
+% ;================
+% ; MAIN ROUTINE
+% ;================
+% ;
+% pro aerosol_simple_invert,leo_file,racmo_file,t1,t2,h1,h2,zn1,zn2,Xt=Xt,dXt=dXt,C=C,d_C=d_C,S=S,dS=dS,time,z,tot_sig,depol,depol_a,ext,beta,R,d_ext_noise,d_beta_noise,d_R_noise,d_ext_bias,d_beta_bias,d_R_bias,tau_out,d_tau_out,outfile=outfile
+% ;
+% ;
+% ; ext_ret,'../cesar_uvlidar_backscatter_la1_t30s_v1.0_20100419.nc','RACMO/KNRAC_20100419_0000_cabauw.nc',0.0,4.0,3.0,7.0
+% ;
+% ;
+% ;
+% ;----------------
+% ; Some constants
+% ;----------------
+% ;
+% mw_air=28.966        ; g/mol
+% k_boltz=1.380658e-23 ; Nm/K
+% av_num=6.0222e+23    ; molecules/mole
+% cp=1004              ; J/Kg/K
+% cv=717               ; J/Kg/K
+% Rg=8.314             ; J/mole/K Universal gass cnst
+% pi=3.141592654
+% rho_w=1.0e+6         ; g/m^3
+% rho_i=0.92e+6        ; g/m^3
+% mol_wt_H2O=18.010565 ; g/mol
+% mol_wt_O3=47.984745  ; g/mol
+% Rda=287              ; J/Kg/K dry air gass cnst
+% Rw=461.5             ; J/Kg/K water vapor gass cnst
+% c_light=3.0e+8       ; m/s
+% h_planck=6.6226e-34  ; J.s
+% ;
+% ;----------------
+% ; Read the data
+% ;----------------
+% ;
+% print,'Reading ',leo_file
+% read_leo_nc_sm,leo_file,para_data,perp_data
+% print,'Reading ',racmo_file
+% read_ncdf,racmo_file,racmo_data
+% ;
+% ;-----------------
+% ; Select the data
+% ;-----------------
+% ii=where((para_data.times ge t1) and (para_data.times le t2),nt)
+% jj=where((para_data.alts ge h1) and (para_data.alts le h2),nz)
+% ;
+% time=para_data.times[ii]
+% z=para_data.alts[jj]
+% ;
+% para_sig=fltarr(nt,nz)
+% perp_sig=fltarr(nt,nz)
+% d_para_sig=fltarr(nt,nz)
+% d_perp_sig=fltarr(nt,nz)
+% ;
+% ;
+% ;
+% ;
+% ; Find the density from the RACMO output
+% ;
+% rho=fltarr(nt,nz)
+% ;
+% time_racmo=racmo_data.time
+% p_racmo=racmo_data.pressure                ; In Pa
+% t_racmo=racmo_data.temperature                ; In K
+% z_racmo=racmo_data.height/1000.0                ; Now in km
+% nz_racmo=n_elements(z_racmo[*,0])
+% ;
+% rho_racmo=p_racmo/(Rg*t_racmo)*av_num           ; 1/m3
+% rho_racmo=rho_racmo*1.0e-6                      ; 1/cm3
+% ;
+% for i=0,nt-1 do begin
+%     ;
+%     z_temp=fltarr(nz_racmo)
+%     rho_temp=fltarr(nz_racmo)
+%     for j=0,nz_racmo-1 do begin
+%         z_temp[j]=interpol(z_racmo[j,*],time_racmo,time[i])
+%         rho_temp[j]=interpol(rho_racmo[j,*],time_racmo,time[i])
+%     endfor
+%     ;
+%     for j=0,nz-1 do begin
+%         ;
+%         para_sig[i,j]=para_data.signal[ii[i],jj[j]]
+%         perp_sig[i,j]=perp_data.signal[ii[i],jj[j]]
+%         d_para_sig[i,j]=para_data.std_deviation[ii[i],jj[j]]
+%         d_perp_sig[i,j]=perp_data.std_deviation[ii[i],jj[j]]
+%         ;
+%         rho[i,j]=interpol(rho_temp,exp(z_temp),exp(z[j]))
+%         ;
+%     endfor
+%  endfor
+% ;
+% ;
+% ;                                ;
+% if not(keyword_set(Xt)) then begin
+%    Xt=0.019
+% endif
+%                                 ;
+% if not(keyword_set(dXt)) then begin
+%    dXt=0.0025
+% endif
+%                                 ;
+% if not(keyword_set(C)) then begin
+%    C=0.21
+% endif
+%                                 ;
+% if not(keyword_set(dC)) then begin
+%    dC=0.02
+% endif
+% ;
+% if not(keyword_set(S)) then begin
+%    S=50.0
+% endif
+% ;
+% if not(keyword_set(dS)) then begin
+%    dS=20.0
+% endif
+% ;
+% ;============================
+% ;
+% Cr=(1.0/C)[0]
+% x_fac=(Xt)[0]
+% fac=Cr-x_fac^2
+%                                 ;
+% if keyword_set(no_X_cor) then begin
+%    perp_sig=perp_sig/no_X_cor   ; remove the C applied earlier      
+%    d_perp_sig=d_perp_sig/no_X_cor   ; remove the C applied earlier      
+% endif
+% ;
+% tot_sig=1.0/fac*(para_sig*(Cr-x_fac)+perp_sig*(1.0-x_fac))
+% d_tot_sig=1.0/fac*sqrt((d_para_sig*(Cr-x_fac))^2+(d_perp_sig*(1.0-x_fac))^2)
+% depol=(perp_sig-x_fac*para_sig)/(Cr*para_sig-x_fac*perp_sig) 
+% d_depol=depol*sqrt((d_para_sig/para_sig)^2+(d_perp_sig/perp_sig)^2)   ; Quick and dirty
+% ;
+% ;--------------------------------
+% ; Rayleigh scattering parameters
+% ;--------------------------------
+% ;
+%   get_ray_sigma_beta,353.,alpha_ray,beta_ray
+% ;
+%   alpha_ray=rho*alpha_ray       ; now in 1/km
+%   beta_ray=rho*beta_ray         ; now in 1/km
+% ;
+% ;===============
+% ; Loop in time
+% ;===============
+% ;
+% ;
+% ;
+% ;
+% ;
+% z_res=z[1]-z[0]
+% ii_norm=where((z ge zn1) and (z le zn2))
+% ;
+% ext=fltarr(nt,nz)
+% beta=fltarr(nt,nz)
+% R=fltarr(nt,nz)
+% ;
+% d_ext_noise=fltarr(nt,nz)
+% d_beta_noise=fltarr(nt,nz)
+% d_R_noise=fltarr(nt,nz)
+% ;
+% d_ext_bias=fltarr(nt,nz)
+% d_beta_bias=fltarr(nt,nz)
+% d_R_bias=fltarr(nt,nz)
+% ;
+% depol_a=fltarr(nt,nz)
+% ;
+% tau_out=fltarr(nt)
+% d_tau_out=fltarr(nt)
+% ;
+% for it=0,nt-1 do begin
+%    ;
+%    print,it,nt
+%    ;
+%     ;
+%     ;---------------------------------
+%     ; Remove the Rayleigh extinction
+%     ;---------------------------------
+%     ;
+%     Scp=fltarr(nz)
+%     Scp1=fltarr(nz)
+%     Scp2=fltarr(nz)
+%     Sc=fltarr(nz)
+%     d_Sc=fltarr(nz)
+%     d_Scp=fltarr(nz)
+%     d_Scp1=fltarr(nz)
+%     d_Scp2=fltarr(nz)
+%     ;
+%     tau=0.0
+%     for j=0,nz-1 do begin
+%         tau=tau+alpha_ray[it,j]*z_res
+%         SC[j]=tot_sig[it,j]*exp(2.0*tau)
+%         d_SC[j]=d_tot_sig[it,j]*exp(2.0*tau)
+%     endfor
+%     ;
+%     ;-----------------------------------
+%     ; Setup the signal for inversion
+%     ;----------------------------------
+%     ;
+%     tau=0
+%     tau1=0
+%     tau2=0
+%     for j=0,nz-1 do begin
+%        ;
+%        tau=tau+(beta_ray[it,j]*s)*z_res
+%        SCp[j]=SC[j]*exp(-2.0*tau)
+%        d_SCp[j]=d_SC[j]*exp(-2.0*tau)
+%        ;
+%        tau1=tau1+(beta_ray[it,j]*(s+ds))*z_res
+%        SCp1[j]=SC[j]*exp(-2.0*tau1)
+%        d_SCp1[j]=d_SC[j]*exp(-2.0*tau1)
+%        ;
+%        tau2=tau2+(beta_ray[it,j]*(s-ds))*z_res
+%        SCp2[j]=SC[j]*exp(-2.0*tau2)
+%        d_SCp2[j]=d_SC[j]*exp(-2.0*tau2)
+%        ;
+%     endfor
+%     ;
+%     alpha_m=mean(beta_ray[it,ii_norm])*S
+%     ;                            ;
+%     Klett_general_interval,z,SCp,d_SCp,1.0,1.0,zn1,zn2,alpha_m,alphap,Cp,0,d_alphap
+%     R[it,*]=alphap/s/beta_ray[it,*]
+%     d_R_noise[it,*]=d_alphap/s/beta_ray[it,*]
+%     ;
+%     ii=where(z le 0.300)
+%     jj=max(ii)
+%     R[ii]=R[jj]
+%     ;
+%     beta[it,*]=(R[it,*]-1.0)*beta_ray[it,*]
+%     d_beta_noise[it,*]=d_R_noise[it,*]*beta_ray[it,*]
+%     ;
+%     ext[it,*]=beta[it,*]*s
+%     d_ext_noise[it,*]=d_beta_noise[it,*]*s
+%     ;
+%     alpha_m1=mean(beta_ray[it,ii_norm])*(S+dS)
+%     Klett_general_interval,z,SCp1,d_SCp1,1.0,1.0,zn1,zn2,alpha_m1,alphap1,Cp1,0,d_alphap1
+% 
+%     alpha_m2=mean(beta_ray[it,ii_norm])*(S-dS)
+%     Klett_general_interval,z,SCp2,d_SCp2,1.0,1.0,zn1,zn2,alpha_m2,alphap2,Cp2,0,d_alphap2
+%     ;
+%     d_R_bias[it,*]=abs((alphap1/(s+dS)/beta_ray[it,*]-alphap2/(s-dS)/beta_ray[it,*])/2.0)
+%     ;
+%     d_beta_bias[it,*]=d_R_bias[it,*]*beta_ray[it,*]
+%     d_ext_bias[it,*]=abs((alphap1-(s+ds)*beta_ray[it,*])-(alphap2-(s-ds)*beta_ray[it,*]))/2.0
+%     ;
+%     tau_out[it]=z_res*total(ext[it,*])
+%     d_tau_out[it]=z_res*total(d_ext_bias[it,*])
+%     ;
+% endfor
+% ;
+% ;
+% ;
+% depol_m=0.00415
+% ;               
+% M1=depol_m/(1.0+depol_m)
+% M2=1.0/(1.0+depol_m)
+% ;                                ;
+% depol_a=(M1-depol*(R-1.0+M2))/(depol*M2-(R-1.0+M1))
+% ;
+% ;   d_depol_a=abs((depol_a-depol)/(depol*M2-(R_good-1.0+M1)))*d_R_good
+% ;   d_depol_a=sqrt(d_depol_a^2+((depol_a*M2+(R-1)+M2)/(depol*M2-(R_good-1.0+M1))*d_depol)^2)
+% ;
+% 
+% ;   
+% 
+% endif
+% ;
+% return
+% end
+% ;
